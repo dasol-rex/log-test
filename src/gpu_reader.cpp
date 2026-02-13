@@ -9,8 +9,7 @@ bool GpuReader::start(int interval_ms) {
 
     interval_ms_ = interval_ms;
 
-    // tegrastats는 보통 root 권한에서 잘 동작함
-    // 만약 유저로 돌린다면 sudo tegrastats ... 로 바꿔야 할 수 있음
+    // tegrastats는 보통 root 권한에서 잘 동작
     std::string cmd = "tegrastats --interval " + std::to_string(interval_ms_);
 
     pipe_ = popen(cmd.c_str(), "r");

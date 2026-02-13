@@ -1,0 +1,47 @@
+[
+    {
+        "arguments": [
+            "g++",
+            "-c",
+            "-std=c++17",
+            "-O2",
+            "-Wall",
+            "-Wextra",
+            "-o",
+            "src/Logger.o",
+            "src/Logger.cpp"
+        ],
+        "directory": "/home/rex/test/log",
+        "file": "src/Logger.cpp"
+    },
+    {
+        "arguments": [
+            "g++",
+            "-c",
+            "-std=c++17",
+            "-O2",
+            "-Wall",
+            "-Wextra",
+            "-o",
+            "src/main.o",
+            "src/main.cpp"
+        ],
+        "directory": "/home/rex/test/log",
+        "file": "src/main.cpp"
+    },
+    {
+        "arguments": [
+            "g++",
+            "-c",
+            "-std=c++17",
+            "-O2",
+            "-Wall",
+            "-Wextra",
+            "-o",
+            "src/gpu_reader.o",
+            "src/gpu_reader.cpp"
+        ],
+        "directory": "/home/rex/test/log",
+        "file": "src/gpu_reader.cpp"
+    }
+]

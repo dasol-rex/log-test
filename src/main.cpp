@@ -1,46 +1,43 @@
-#include "Logger.h"
-#include "gpu_reader.h"
+#include "monitor.h"
 #include <iostream>
-#include <thread>
-#include <chrono>
-#include <sstream>
-#include <iomanip>
+#include <csignal>
 
-int main() {
-    // 1. 객체 생성
-    Logger myLogger("system_stats");
-    GpuReader gpu;
+static Monitor* g_mon = nullptr;
 
-    // 2. GPU 모니터링 시작
-    // 터미널 출력 대신 내부적으로 시작 여부를 체크
-    gpu.start(1000); 
+static void handleSignal(int) {
+    if (g_mon) g_mon->stop();   // Ctrl+C 들어오면 동일한 stop 루틴 실행
+}
 
-    // 실행 시작 시점에만 딱 한 번 터미널에 알려줌
-    std::cout << "Monitoring started in the background. (logs/ folder)" << std::endl;
-
-    // 3. 메인 루프
-    while (true) {
-        double cpu = myLogger.getCPUUsage();
-        long ram = myLogger.getMemoryUsage() / 1024; // MB 변환
-        auto snap = gpu.latest();
-
-        std::stringstream ss;
-        ss << "CPU: " << std::fixed << std::setprecision(2) << cpu << "%, "
-           << "RAM: " << ram << " MB";
-
-        if (snap) {
-            ss << ", GR3D: " << snap->gr3d_util_pct << "%, "
-               << "SYS_RAM: " << snap->ram_used_mb << "/" << snap->ram_total_mb << " MB";
-        } else {
-            ss << ", GR3D: N/A";
-        }
-
-        // 파일에만 기록 (std::cout 출력 삭제)
-        myLogger.logLine(ss.str());
-
-        // 5초 대기
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+int main(int argc, char** argv) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <pid> [logBaseName]\n";
+        return 1;
     }
 
+    int pid = 0;
+    try {
+        pid = std::stoi(argv[1]);
+    } catch (...) {
+        std::cerr << "Invalid PID: " << argv[1] << "\n";
+        return 1;
+    }
+
+    std::string logBaseName = (argc >= 3) ? argv[2] : "system_log";
+
+    Monitor mon(pid, logBaseName);
+    g_mon = &mon;
+
+    // Ctrl+C / kill(terminate) 처리
+    std::signal(SIGINT, handleSignal);
+    std::signal(SIGTERM, handleSignal);
+
+    if (!mon.init()) {
+        std::cerr << "Failed to init monitor. PID=" << pid << "\n";
+        return 1;
+    }
+
+    mon.run();
+
+    g_mon = nullptr;
     return 0;
 }

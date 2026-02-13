@@ -9,6 +9,10 @@ public:
     Logger(const std::string& baseName);
     void logStatus();
     void logLine(const std::string& line);
+    int getPIDByName(const std::string& procName);
+    double getProcessCPUUsage(int pid);
+    long getProcessMemoryUsage(int pid);
+    long long getProcessStartTime(int pid);
     
     // 시스템 정보 추출 함수
     double getCPUUsage();
