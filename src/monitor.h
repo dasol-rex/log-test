@@ -12,11 +12,16 @@ public:
     ~Monitor();
 
     bool init();
+    bool initByName(const std::string& targetName);
     void run();
     void stop();
 
     bool termination_logged_ = false;
     bool reused_logged_ = false;
+
+    
+
+    long getSpecificProcessGpuMem(int pid);
 
 private:
     bool checkValidity();

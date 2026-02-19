@@ -10,29 +10,22 @@ static void handleSignal(int) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <pid> [logBaseName]\n";
+        std::cerr << "Usage: " << argv[0] << " <process_name> [logBaseName]\n";
         return 1;
     }
 
-    int pid = 0;
-    try {
-        pid = std::stoi(argv[1]);
-    } catch (...) {
-        std::cerr << "Invalid PID: " << argv[1] << "\n";
-        return 1;
-    }
+    std::string procName = argv[1];
+    std::string logBaseName = (argc >= 3) ? argv[2] : procName;
 
-    std::string logBaseName = (argc >= 3) ? argv[2] : "system_log";
-
-    Monitor mon(pid, logBaseName);
+    // pid는 더 이상 main에서 받지 않고, Monitor가 이름으로 찾게
+    Monitor mon(/*pid*/ -1, logBaseName);
     g_mon = &mon;
 
-    // Ctrl+C / kill(terminate) 처리
     std::signal(SIGINT, handleSignal);
     std::signal(SIGTERM, handleSignal);
 
-    if (!mon.init()) {
-        std::cerr << "Failed to init monitor. PID=" << pid << "\n";
+    if (!mon.initByName(procName)) {
+        std::cerr << "Failed to init monitor by name: " << procName << "\n";
         return 1;
     }
 

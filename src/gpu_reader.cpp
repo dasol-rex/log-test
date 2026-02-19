@@ -8,18 +8,15 @@ bool GpuReader::start(int interval_ms) {
     if (running_.load()) return true;
 
     interval_ms_ = interval_ms;
-
-    // tegrastats는 보통 root 권한에서 잘 동작
+    // tegrastats 실행 시 불필요한 출력을 줄이고 인터벌을 정확히 명시
     std::string cmd = "tegrastats --interval " + std::to_string(interval_ms_);
 
     pipe_ = popen(cmd.c_str(), "r");
     if (!pipe_) {
-        std::cerr << "Failed to start tegrastats via popen(): " << std::strerror(errno) << "\n";
         return false;
     }
 
     running_.store(true);
-    //메인 프로그램이 멈추지 않도록 별도 스레드에서 읽기
     reader_thread_ = std::thread(&GpuReader::readerLoop, this);
     return true;
 }
@@ -66,7 +63,6 @@ void GpuReader::readerLoop() {
             latest_ = snap;
         }
     }
-
     // 여기 도달하면 tegrastats가 끊긴 상태
     running_.store(false);
 }
@@ -74,22 +70,25 @@ void GpuReader::readerLoop() {
 bool GpuReader::parseLine(const std::string& line, TegrastatsSnapshot& out) {
     // RAM 3099/7471MB ... GR3D_FREQ 0%@[764,0] ...
     static const std::regex ram_re(R"(RAM\s+(\d+)\/(\d+)MB)");
-    static const std::regex gr3d_re(R"(GR3D_FREQ\s+(\d+)%\@)");
+    static const std::regex gr3d_re(R"(GR3D_FREQ\s+(\d+)%)");
 
     std::smatch m;
+    bool ram_ok = false;
+    bool gpu_ok = false;
 
-    bool ok = false;
-
+    // RAM 정보 추출
     if (std::regex_search(line, m, ram_re) && m.size() >= 3) {
         out.ram_used_mb = std::stoi(m[1].str());
         out.ram_total_mb = std::stoi(m[2].str());
-        ok = true;
+        ram_ok = true;
     }
 
+    // GPU 정보 추출 (GR3D_FREQ 뒤의 숫자만 깔끔하게 가져옴)
     if (std::regex_search(line, m, gr3d_re) && m.size() >= 2) {
         out.gr3d_util_pct = std::stoi(m[1].str());
-        ok = true;
+        gpu_ok = true;
     }
 
-    return ok;
+    // 둘 중 하나라도 성공하면 데이터가 업데이트된 것으로 간주
+    return ram_ok || gpu_ok;
 }
