@@ -120,7 +120,7 @@ double Logger::getProcessCPUUsage(int pid) {
     static long last_proc = 0;
     static auto last_time = std::chrono::steady_clock::now();
 
-    // proc utime+stime (jiffies)
+    // proc usertime+systemtime (jiffies)
     std::ifstream pstat("/proc/" + std::to_string(pid) + "/stat");
     if (!pstat.is_open()) return 0.0;
 
@@ -132,7 +132,7 @@ double Logger::getProcessCPUUsage(int pid) {
     long proc = utime + stime;
     auto now = std::chrono::steady_clock::now();
 
-    // first call: baseline
+    // first call: baseline 지금의 속도를 알 수 없으니 0%로 반환. 다음 호출부터 실제 계산 시작
     if (last_proc == 0) {
         last_proc = proc;
         last_time = now;
@@ -145,7 +145,7 @@ double Logger::getProcessCPUUsage(int pid) {
     last_proc = proc;
     last_time = now;
 
-    long ticks = sysconf(_SC_CLK_TCK); // jiffies per second
+    long ticks = sysconf(_SC_CLK_TCK); // jiffies -> seconds 환산용
     double diff_proc_sec = (double)diff_proc / (double)ticks;
 
     if (diff_wall.count() <= 0.0) return 0.0;

@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+
 // PID 검색을 위한 리눅스 시스템 헤더
 #include <dirent.h>
 #include <unistd.h>
@@ -79,7 +80,7 @@ bool Monitor::init() {
     return true;
 }
 
-// Monitor.cpp 내부 수정 제안
+// Monitor.cpp 내부 수정 - 특정 프로세스의 GPU 메모리 사용량 추출 함수 추가
 bool Monitor::initByName(const std::string& targetName) {
     auto pids = findPidsByName(targetName);
 

@@ -49,9 +49,12 @@ void GpuReader::readerLoop() {
         if (!pipe_) break;
 
         if (!fgets(buf, sizeof(buf), pipe_)) {
-            // EOF or error: tegrastats가 종료됐거나 파이프 문제
-            break;
+            if(running_.load()) {
+                std::cerr << "[Warning] Failed to read from tegrastats pipe."<<std::endl;
+            }
+            break; // 읽기 실패 (예: tegrastats 종료)
         }
+    
 
         std::string line(buf);
 
@@ -62,17 +65,21 @@ void GpuReader::readerLoop() {
             std::lock_guard<std::mutex> lock(mtx_);
             latest_ = snap;
         }
+        else {
+            std::cerr << "[Warning] Failed to parse tegrastats line: " << line << std::endl;
+        }
     }
     // 여기 도달하면 tegrastats가 끊긴 상태
     running_.store(false);
 }
 
 bool GpuReader::parseLine(const std::string& line, TegrastatsSnapshot& out) {
-    // RAM 3099/7471MB ... GR3D_FREQ 0%@[764,0] ...
+    // RAM,GR3D_FREQ 정보을 정규식으로 추출
     static const std::regex ram_re(R"(RAM\s+(\d+)\/(\d+)MB)");
     static const std::regex gr3d_re(R"(GR3D_FREQ\s+(\d+)%)");
 
     std::smatch m;
+    //ram_ok, gpu_ok 플래그로 각각의 정보가 성공적으로 추출됐는지 추적
     bool ram_ok = false;
     bool gpu_ok = false;
 
@@ -82,11 +89,17 @@ bool GpuReader::parseLine(const std::string& line, TegrastatsSnapshot& out) {
         out.ram_total_mb = std::stoi(m[2].str());
         ram_ok = true;
     }
+    else {
+        std::cerr << "[Warning] Failed to parse RAM info from line: " << line << "\n";
+    }
 
     // GPU 정보 추출 (GR3D_FREQ 뒤의 숫자만 깔끔하게 가져옴)
     if (std::regex_search(line, m, gr3d_re) && m.size() >= 2) {
         out.gr3d_util_pct = std::stoi(m[1].str());
         gpu_ok = true;
+    }
+    else {
+        std::cerr << "[Warning] Failed to parse GR3D_FREQ info from line: " << line << "\n";
     }
 
     // 둘 중 하나라도 성공하면 데이터가 업데이트된 것으로 간주
